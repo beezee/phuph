@@ -21,28 +21,40 @@ function actions(): array {
   // This is used greedily, so these need to be ordered descending by
   // test string length
   return [
-    ["```phuph", "text", "code", true],
-    ["repl{", "code", "repl", true],
-    ["```", "code", "text", false],
-    ["}", "repl", "code", false],
+    "text->silentcode" => ["```phuphsilent", "text", "silentcode", true],
+    "silentcode->text" => ["phuphsilent```", "silentcode", "text", false],
+    "text->plaincode" => ["```plaincode", "text", "plaincode", true],
+    "plaincode->text" => ["plaincode```", "plaincode", "text", false],
+    "text->code" => ["```phuph", "text", "code", true],
+    "code->text" => ["phuph```", "code", "text", false],
+    "code->repl" => ["repl{", "code", "repl", true],
+    "repl->code" => ["}", "repl", "code", false]
   ];
 }
 
-function filterMaybe(callable $p, Maybe\Maybe $m): Maybe\Maybe {
-  return $m->bind(function($x) use ($p) {
-    return $p($x) ? Maybe\just($x) : Maybe\nothing();
-  });
+function getIfSet($k, $a): Maybe\Maybe {
+  return (isset($a[$k])) ? Maybe\just($a[$k]) : Maybe\none();
+}
+
+function action($close, $open): Maybe\Maybe {
+  return getIfSet("{$close}->{$open}", actions());
+}
+
+
+// param actions: [(open: context, close: context)]
+function filterActions(array $actions): array {
+  return array_reduce($actions, function($a, $k) {
+    return wf\push_($a, action($k[0], $k[1])
+      ->map(function ($a) { return [$a]; }) 
+      ->extract() ?: []);
+  }, []);
 }
 
 // TODO - this is partial, which is stupid
 // maybe once php-data is documented and refined it can help here
 function badSyntax(string $close, string $open): array {
-  return filterMaybe(
-      function($arr) { return sizeof($arr) > 0; },
-      Maybe\just(array_values(array_filter(actions(), function($e) use ($close, $open) {
-        return $e[1] == $close && $e[2] == $open;
-      }))))
-    ->map(function($a) { return [$a[0][0], $a[0][3]]; })
+  return action($close, $open)
+    ->map(function($a) { return [$a[0], $a[3]]; })
     ->reduce(function($a, $e) { return $e; }, ["error", true]);
 }
 
@@ -62,8 +74,9 @@ function orElse(Maybe\Maybe $m1, Maybe\Maybe $m2): Maybe\Maybe {
   return $m1->reduce(function($a, $e) { return Maybe\just($e); }, $m2);
 }
 
-function testActions(int $ix, string $file): Maybe\Maybe {
-  return array_reduce(actions(), function($a, $e) use ($ix, $file) {
+// param actions: [actiontest]
+function testActions(int $ix, string $file, array $actions): Maybe\Maybe {
+  return array_reduce($actions, function($a, $e) use ($ix, $file) {
     return orElse($a, testAction($e, $ix, $file));
   }, Maybe\nothing());
 }
@@ -97,7 +110,7 @@ const processRec = '\phuph\Phuph::processRec';
 
 class Phuph {
 
-  // context: string = "code" | "repl" | "text"
+  // context: string = "silentcode" | "plaincode" | "code" | "repl" | "text"
   // action: open | close = t|f
   // param acc: [(context, action, ix)]
   // param sc: specialContexts
@@ -107,13 +120,17 @@ class Phuph {
     if (strlen($file) > $ix && specialContextZero() != $sc) 
       return T\bounce(parseRec, 
         $ix + 1, $file, specialContext(substr($file, $ix, 1), $sc), $acc);
-    list($nAcc, $nSc) = testActions($ix, $file)->reduce(
+    // only acknowledge close tag when in plaincode
+    $actions = (last($acc)[0] == "plaincode") 
+      ? filterActions([["plaincode", "text"]]) : array_values(actions());
+    // only honor special contexts when outside plaincode or text
+    $bSc = (in_array(last($acc)[0], ["text", "plaincode"]))
+      ? $sc
+      : specialContext(substr($file, $ix, 1), $sc);
+    list($nAcc, $nSc) = testActions($ix, $file, $actions)->reduce(
       function($a, $e) use ($ix, $file, $sc) {
         return [wf\push_($a[0], tail($e)), $sc];
-      }, [$acc, 
-          (last($acc)[0] == "text")
-            ? $sc
-            : specialContext(substr($file, $ix, 1), $sc)]);
+      }, [$acc, $bSc]);
     $lastOpen = last($nAcc);
     // base case, end recursion
     if (strlen($file) == $ix)
@@ -140,11 +157,11 @@ class Phuph {
       return function() use ($o, $e, $n, $file, $acc) {
         return $e[1]
           ? static::error($file, ["error", false], $o[2], $e[2])
-          : (($e[0] == $o[0]) 
+          : (($e[0] == $o[0])
             ? [Maybe\nothing(), 
                wf\push_(
                 $acc, 
-                [[$e[0], substr($file, $o[2], $e[2] + 1 - $o[2])]])]
+                [[$o[0], substr($file, $o[2], $e[2] + 1 - $o[2])]])]
             : static::error($file, badSyntax($e[0], $n[0]), $n[2], $e[2]));
       };
     }, function() use($e, $n, $file, $acc) {
@@ -160,7 +177,18 @@ class Phuph {
     ob_start();
     $a = "";
     foreach($processed as $i => $e) {
-      if ($e[0] == "text") $a .= ($a == "") ? $e[1] : "```" . $e[1];
+      if ($e[0] == "text") $a .= 
+        (isset($processed[$i - 1]) && $processed[$i - 1][0] != "silentcode")
+          ? "```" . $e[1] : $e[1];
+      if ($e[0] == "plaincode") $a .= "````" . $e[1] . "`";
+      if ($e[0] == "silentcode") {
+        try {
+          eval($e[1]);
+        } catch (Throwable $err) {
+          $l = $err->getLine() + sizeof(explode($a, "\n"));
+          throw new Exception("Line $l " . $err->getMessage());
+        }
+      }
       if ($e[0] == "code") {
         try {
           eval($e[1]);

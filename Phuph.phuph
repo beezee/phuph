@@ -10,6 +10,12 @@ function example($i) {
 
 repl{ example(7); }
 repl{ example(9); }
-```
+phuph```
+
+```plaincode
+```phuph
+do some stuff
+phuph```
+plaincode```
 
 And here's the end
