@@ -45,7 +45,6 @@ function action($close, $open): Maybe\Maybe {
   return getIfSet("{$close}->{$open}", actions());
 }
 
-
 // param actions: [(open: context, close: context)]
 function filterActions(array $actions): array {
   return array_reduce($actions, function($a, $k) {
@@ -88,9 +87,9 @@ function testActions(int $ix, string $file, array $actions): Maybe\Maybe {
 
 // specialContexts: [inQuote: boolean, inDoubleQuote: boolean, inBrace: int]
 // inContext :: char -> specialContexts -> specialContexts
-function specialContext(string $char, array $c): array {
-  if ($char == "'" && !$c[1]) return [!$c[0], $c[1], $c[2]];
-  if ($char == '"' && !$c[0]) return [$c[0], !$c[1], $c[2]];
+function specialContext(string $char, array $c, bool $esc): array {
+  if ($char == "'" && !$c[1] && !$esc) return [!$c[0], $c[1], $c[2]];
+  if ($char == '"' && !$c[0] && !$esc) return [$c[0], !$c[1], $c[2]];
   if ($char == '{' && !($c[0] || $c[1])) return [$c[0], $c[1], $c[2] + 1];
   if ($char == '}' && !($c[0] || $c[1])) return [$c[0], $c[1], $c[2] - 1];
   return $c;
@@ -110,10 +109,17 @@ function tail(array $a) {
   return wf\tee('array_shift')($b);
 }
 
+const escapedRec = '\phuph\Phuph::escapedRec';
 const parseRec = '\phuph\Phuph::parseRec';
 const processRec = '\phuph\Phuph::processRec';
 
 class Phuph {
+
+  static function escapedRec(int $ix, string $file, bool $esc) {
+    if (substr($file, $ix, 1) != '\\') return $esc;
+    if ($ix == 0) return !$esc;
+    return T\bounce(escapedRec, $ix-1, $file, !$esc);
+  }
 
   // context: string = "escape" | "silentcode" | "plaincode" | "code" | "repl" | "text"
   // action: open | close = t|f
@@ -121,17 +127,18 @@ class Phuph {
   // param sc: specialContexts
   // return [(context, action, ix)]
   static function parseRec(int $ix, string $file, array $sc, array $acc) {
+    $isEsc = T\trampoline(escapedRec, $ix-1, $file, false);
     // recurse inside string or opened braces
     if (strlen($file) > $ix && specialContextZero() != $sc) 
       return T\bounce(parseRec, 
-        $ix + 1, $file, specialContext(substr($file, $ix, 1), $sc), $acc);
+        $ix + 1, $file, specialContext(substr($file, $ix, 1), $sc, $isEsc), $acc);
     // only acknowledge close tag when in plaincode
     $actions = (last($acc)[0] == "plaincode") 
       ? filterActions([["plaincode", "text"]]) : array_values(actions());
     // only honor special contexts when outside plaincode or text
     $bSc = (in_array(last($acc)[0], ["text", "plaincode"]))
       ? $sc
-      : specialContext(substr($file, $ix, 1), $sc);
+      : specialContext(substr($file, $ix, 1), $sc, $isEsc);
     list($nAcc, $nSc) = testActions($ix, $file, $actions)->reduce(
       function($a, $e) use ($ix, $file, $sc) {
         return [wf\push_($a[0], tail($e)), $sc];
