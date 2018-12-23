@@ -1,0 +1,22 @@
+{
+    "name": "beezee/phuph",
+    "description": "doc/tutorial generator for php",
+    "type": "library",
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "beezee",
+            "email": "brian.zeligson@gmail.com"
+        }
+    ],
+    "autoload": {
+      "psr-4": {
+        "phuph\\": "src/"
+      }
+    },
+    "require": {
+      "widmogrod/php-functional": "^5.1",
+        "functional-php/trampoline": "dev-master"
+    },
+    "minimum-stability": "dev"
+}
