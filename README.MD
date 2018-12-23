@@ -11,9 +11,17 @@ It's just PHP that generates documentation for PHP by evaluating the PHP in said
 which was used to generate the documentation for that PHP. And a monad is a monoid
 in the category of endofunctors.
 
-## Installation
+## Installation And Use
 
     composer g require beezee/phuph
+
+This allows you to target specially formatted markdown files for document generation with the phuph
+command. If you have your markdown in the file `README.phuph`, you would run
+
+    phuph README.phuph > README.MD
+
+to generate an evaluated version, with the output of your code blocks interleaved with
+their definitions.
 
 ## Example
 
