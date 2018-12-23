@@ -39,9 +39,9 @@ function filterMaybe(callable $p, Maybe\Maybe $m): Maybe\Maybe {
 function badSyntax(string $close, string $open): array {
   return filterMaybe(
       function($arr) { return sizeof($arr) > 0; },
-      Maybe\just(array_filter(actions(), function($e) use ($close, $open) {
+      Maybe\just(array_values(array_filter(actions(), function($e) use ($close, $open) {
         return $e[1] == $close && $e[2] == $open;
-      })))
+      }))))
     ->map(function($a) { return [$a[0][0], $a[0][3]]; })
     ->reduce(function($a, $e) { return $e; }, ["error", true]);
 }
@@ -109,11 +109,6 @@ class Phuph {
         $ix + 1, $file, specialContext(substr($file, $ix, 1), $sc), $acc);
     list($nAcc, $nSc) = testActions($ix, $file)->reduce(
       function($a, $e) use ($ix, $file, $sc) {
-        $l = last($a[0]);
-        if (!($e[1][0] == $l[0] && $l[1] && !$e[1][1])) {
-          $lineno = sizeof(explode(substr($file, 0, $ix), "\n"));
-          throw new \Exception("Unexpected {$e[0]} at line $lineno");
-        }
         return [wf\push_($a[0], tail($e)), $sc];
       }, [$acc, 
           (last($acc)[0] == "text")
@@ -128,8 +123,8 @@ class Phuph {
   }
 
   // TODO - this has gotten ugly... coupling of ixs and err is opaque
-  function error(string $file, array $err, int $oix, int $cix) {
-    $lineno = sizeof(explode(substr($file, 0, $err[1] ? $oix : $cix), "\n"));
+  static function error(string $file, array $err, int $oix, int $cix) {
+    $lineno = sizeof(explode("\n", substr($file, 0, $err[1] ? $oix : $cix)));
     throw new \Exception("Unexpected {$err[0]} at line $lineno");
   }
 
@@ -144,18 +139,18 @@ class Phuph {
     list($nOpen, $nAcc) = $open->reduce(function($_, $o) use($e, $n, $file, $acc) {
       return function() use ($o, $e, $n, $file, $acc) {
         return $e[1]
-          ? error($file, ["error", false], $o[2], $e[2])
+          ? static::error($file, ["error", false], $o[2], $e[2])
           : (($e[0] == $o[0]) 
             ? [Maybe\nothing(), 
                wf\push_(
                 $acc, 
                 [[$e[0], substr($file, $o[2], $e[2] + 1 - $o[2])]])]
-            : error($file, badSyntax($e[0], $n[0]), $o[2], $e[2]));
+            : static::error($file, badSyntax($e[0], $n[0]), $n[2], $e[2]));
       };
     }, function() use($e, $n, $file, $acc) {
       return $e[1]
         ? [Maybe\just($e), $acc]
-        : error($file, ["error", false], $e[2], $e[2]);
+        : static::error($file, ["error", false], $e[2], $e[2]);
     })();
     return T\bounce(processRec, $ix + 1, $parsed, $file, $nOpen, $nAcc);
   }
