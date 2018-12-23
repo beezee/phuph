@@ -160,12 +160,11 @@ class Phuph {
     ob_start();
     $a = "";
     foreach($processed as $i => $e) {
-      if ($e[0] == "text") $a .= ($a == "") ? $e[1] : "``` \n" . $e[1];
+      if ($e[0] == "text") $a .= ($a == "") ? $e[1] : "```" . $e[1];
       if ($e[0] == "code") {
         try {
-          $c = trim($e[1]);
-          eval($c);
-          $a .= (($processed[$i - 1][0] == "text") ? "\n```php\n" : "") . $c . "\n";
+          eval($e[1]);
+          $a .= (($processed[$i - 1][0] == "text") ? "```php" : "") . $e[1];
         } catch (Throwable $err) {
           $l = $err->getLine() + sizeof(explode($a, "\n"));
           throw new Exception("Line $l " . $err->getMessage());
@@ -173,9 +172,8 @@ class Phuph {
       }
       if ($e[0] == "repl") {
         try {
-          $c = trim($e[1]);
-          $r = eval("return " . $c);
-          $a .= "> " . $c . "\n/* " . print_r($r, true) . " */ \n";
+          $r = eval("return " . $e[1]);
+          $a .= "php> " . $e[1] . "\n/* " . print_r($r, true) . " */";
         } catch (Throwable $err) {
           $l = $err->getLine() + $e[2];
           throw new Exception("Line $l " . $err->getMessage());
