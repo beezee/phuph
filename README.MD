@@ -7,6 +7,10 @@ that is evaluated as part of your build.
 It is a direct (as possible) port of Rob Norris' [sbt-tut](https://github.com/tpolecat/tut)
 for Scala.
 
+It's just PHP that generates documentation for PHP by evaluating the PHP in said documentation,
+which was used to generate the documentation for that PHP. And a monad is a monoid
+in the category of endofunctors.
+
 ## Installation
 
     composer g require beezee/phuph
