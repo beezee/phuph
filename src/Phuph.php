@@ -103,8 +103,8 @@ class Phuph {
   // param sc: specialContexts
   // return [(context, action, ix)]
   static function parseRec(int $ix, string $file, array $sc, array $acc) {
+    // recurse inside string or opened braces
     if (strlen($file) > $ix && specialContextZero() != $sc) 
-      // recurse inside string or opened braces
       return T\bounce(parseRec, 
         $ix + 1, $file, specialContext(substr($file, $ix, 1), $sc), $acc);
     list($nAcc, $nSc) = testActions($ix, $file)->reduce(
