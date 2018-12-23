@@ -157,14 +157,15 @@ class Phuph {
 
   static function buildOutput(array $processed): string {
     // TODO - another great example of the awfulness of no sum types
+    ob_start();
     $a = "";
-    foreach($processed as $e) {
-      if ($e[0] == "text") $a .= $e[1];
+    foreach($processed as $i => $e) {
+      if ($e[0] == "text") $a .= ($a == "") ? $e[1] : "``` \n" . $e[1];
       if ($e[0] == "code") {
         try {
           $c = trim($e[1]);
           eval($c);
-          $a .= $c . "\n";
+          $a .= (($processed[$i - 1][0] == "text") ? "\n```php\n" : "") . $c . "\n";
         } catch (Throwable $err) {
           $l = $err->getLine() + sizeof(explode($a, "\n"));
           throw new Exception("Line $l " . $err->getMessage());
@@ -181,6 +182,7 @@ class Phuph {
         }
       }
     };
+    ob_get_clean();
     return $a;
   }
 
