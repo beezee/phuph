@@ -20,7 +20,7 @@ in the category of endofunctors.
 Given the following file `README.phuph`
 
 ````
-# This is an example
+##### This is an example
 
 Here is some regular markdown content
 
@@ -41,7 +41,7 @@ And here's the end
 `phuph README.phuph` would output the following:
 
 ```` 
-# This is an example
+#### This is an example
 
 Here is some regular markdown content
 
@@ -70,6 +70,40 @@ php>  example(9);
 
 And here's the end
 ````
+
+Which appears as below.
+
+___
+#### This is an example
+
+Here is some regular markdown content
+
+```php
+
+function example($i) {
+  return ['foo' => (1 * $i), 'bar' => (2 * $i)];
+}
+
+php>  example(7); 
+/* Array
+(
+    [foo] => 7
+    [bar] => 14
+)
+ */
+
+php>  example(9); 
+/* Array
+(
+    [foo] => 9
+    [bar] => 18
+)
+ */
+```
+
+And here's the end
+
+---
 
 ## Basic Usage
 
@@ -130,7 +164,12 @@ In addition to basic phuph blocks, two variations exist.
   * plaincode - used to escape all phuph operators within a region of content
   * phuphsilent - used to evaluate PHP for use in later phuph blocks, without displaying the evaluated code
 
-Examples of both can be found in the [file that is used to generate this README](README.phuph)
+In addition to the repl expression, one variation exists.
+
+  * escape - used in place of repl within a phuph block to include code that should be displayed but not evaluated.
+
+Examples of all of the above can be found in the 
+[file that is used to generate this README](README.phuph)
 
 
 ### Contributing

@@ -27,13 +27,18 @@ function actions(): array {
     "plaincode->text" => ["plaincode```", "plaincode", "text", false],
     "text->code" => ["```phuph", "text", "code", true],
     "code->text" => ["phuph```", "code", "text", false],
+    "code->escape" => ["escape{", "code", "escape", true],
     "code->repl" => ["repl{", "code", "repl", true],
     "repl->code" => ["}", "repl", "code", false]
   ];
 }
 
+const closeSynonyms = [
+  'repl' => 'escape'
+];
+
 function getIfSet($k, $a): Maybe\Maybe {
-  return (isset($a[$k])) ? Maybe\just($a[$k]) : Maybe\none();
+  return (isset($a[$k])) ? Maybe\just($a[$k]) : Maybe\nothing();
 }
 
 function action($close, $open): Maybe\Maybe {
@@ -110,7 +115,7 @@ const processRec = '\phuph\Phuph::processRec';
 
 class Phuph {
 
-  // context: string = "silentcode" | "plaincode" | "code" | "repl" | "text"
+  // context: string = "escape" | "silentcode" | "plaincode" | "code" | "repl" | "text"
   // action: open | close = t|f
   // param acc: [(context, action, ix)]
   // param sc: specialContexts
@@ -157,7 +162,7 @@ class Phuph {
       return function() use ($o, $e, $n, $file, $acc) {
         return $e[1]
           ? static::error($file, ["error", false], $o[2], $e[2])
-          : (($e[0] == $o[0])
+          : (($e[0] == $o[0] || getIfSet($e[0], closeSynonyms)->extract() == $o[0])
             ? [Maybe\nothing(), 
                wf\push_(
                 $acc, 
@@ -181,6 +186,7 @@ class Phuph {
         (isset($processed[$i - 1]) && $processed[$i - 1][0] != "silentcode")
           ? "```" . $e[1] : $e[1];
       if ($e[0] == "plaincode") $a .= "````" . $e[1] . "`";
+      if ($e[0] == "escape") $a .= $e[1];
       if ($e[0] == "silentcode") {
         try {
           eval($e[1]);
