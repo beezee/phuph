@@ -9,10 +9,6 @@ use phuph;
 use Widmogrod\Functional as wf;
 use Widmogrod\Monad\Maybe as Maybe;
 
-function isJust(Maybe\Maybe $m): bool {
-  return Maybe\fromMaybe(false, $m->map(wf\constt(true)));
-}
-
 class PhuphTest extends \PHPUnit\Framework\TestCase
 {
 
@@ -30,7 +26,9 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
           return $a && array_reduce(range($i, $ei),
             function ($a, $i2) use ($s, $i) {
               $test = substr($s, $i, $i2 - $i);
-              return $a && ("" == $test || isJust(phuph\matchForward($s, $i, $test)));
+              return $a && ("" == $test || 
+                phuph\matchForward($s, $i, $test)->extract() ==
+                  [$i - 1, $i + strlen($test)]);
             }, true);
         }, true));
       });
