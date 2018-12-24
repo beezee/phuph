@@ -11,7 +11,7 @@ use Widmogrod\Monad\Maybe as Maybe;
 // string -> int -> string -> maybe (int, int)
 function matchForward(string $file, int $ix, string $test): Maybe\Maybe {
   $len = strlen($test);
-  return substr($file, $ix, $len) == $test
+  return $len > 0 && substr($file, $ix, $len) == $test
     ? Maybe\just([$ix - 1, $ix + $len]) : Maybe\nothing();
 }
 

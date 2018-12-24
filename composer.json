@@ -12,12 +12,17 @@
     "autoload": {
       "psr-4": {
         "phuph\\": "src/"
+        "phuph\\test\\": "test/"
       }
     },
     "bin": ["bin/phuph"],
     "require": {
       "widmogrod/php-functional": "^5.1",
         "functional-php/trampoline": "^1.1.0"
+    },
+    "require-dev": {
+        "giorgiosironi/eris": "^0.11.0",
+        "phpunit/phpunit": "^7.5"
     },
     "minimum-stability": "dev"
 }
