@@ -22,8 +22,8 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
 
   public function testMatchForward()
   {
-    $this->forAll(Generator\string())
-      ->then(function($s) {
+    $this->forAll(Generator\string(), Generator\neg())
+      ->then(function($s, $ni) {
         $ei = max(strlen($s) - 1, 0);
         $this->assertTrue(array_reduce(range(0, $ei), function($a, $i) use($s, $ei) {
           return $a && array_reduce(range($i, $ei),
@@ -40,7 +40,9 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
                 "both" => function($r) use ($test, $i) {
                   return [$i - 1, $i + strlen($test)] == $r; }]);
             }, true);
-        }, true));
+        }, true) 
+          && ["nothing", null] == 
+              phuph\matchBoundaries($s, $ni, substr($s, 0, max(0, strlen($s) - 1))));
       });
   }
 
@@ -67,5 +69,24 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
              || ("before" == $b && strlen($f) == $rv[2][2] && $ci == $rv[1][2])
              || ("both" == $b && $ci == $rv[1][2] && $oi == $rv[2][2])))));
       });
+  }
+
+  public function testSpecialContext() {
+    $this->forAll(
+        Generator\elements(["'", '"', "{", "}"]),
+        Generator\bool(), Generator\bool(),
+        Generator\int(), Generator\bool())
+      ->then(function($c, $sq, $dq, $b, $e) {
+        $sc = phuph\specialContext($c, [$sq, $dq, $b], $e);
+        $this->assertTrue(
+          (("'" == $c && $sc[0] != $sq && [false, false, $b] == [$dq, $e, $sc[2]])
+           || ('"' == $c && $sc[1] != $dq && [false, false, $b] == [$sq, $e, $sc[2]])
+           || ("{" == $c && [false, false] == [$sq, $dq]
+               && [false, false, $b + 1] == $sc)
+           || ("}" == $c && [false, false] == [$sq, $dq]
+               && [false, false, $b - 1] == $sc)
+           || ($e && [$sq, $dq] == [$sc[0], $sc[1]])
+           || ([$sq, $dq, $b] == $sc)));
+    });
   }
 }
