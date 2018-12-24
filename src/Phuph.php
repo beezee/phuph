@@ -75,20 +75,26 @@ function badSyntax(string $close, string $open): array {
     ->reduce(function($a, $e) { return $e; }, ["error", true]);
 }
 
-// param actiontest :: actiontest
-// returns Maybe (matchString, (context, action, ix), (context, action, ix))
-function testAction(array $actiontest, int $ix, string $file): Maybe\Maybe {
+// string -> actiontest -> (nothing|before|after|both) -> 
+//    Maybe (matchString, (context, action, ix), (context, action, ix))
+function handleBoundaries(string $file, array $actiontest, array $boundaries): Maybe\Maybe {
   $ixPair = function($c, $o) use ($actiontest) {
     return [
       $actiontest[0],
       [$actiontest[1], false, $c],
       [$actiontest[2], true, $o]];
   };
-  return Maybe\maybeNull(fold(matchBoundaries($file, $ix, $actiontest[0]),
+  return Maybe\maybeNull(fold($boundaries,
     ["nothing" => wf\constt(null),
      "before" => function($i) use ($file, $ixPair) { return $ixPair($i, strlen($file)); },
      "after" => function($i) use ($ixPair) { return $ixPair(0, $i); },
      "both" => function($oc) use ($ixPair) { return $ixPair($oc[0], $oc[1]); }]));
+}
+
+// param actiontest :: actiontest
+// returns Maybe (matchString, (context, action, ix), (context, action, ix))
+function testAction(array $actiontest, int $ix, string $file): Maybe\Maybe {
+  return handleBoundaries($file, $actiontest, matchBoundaries($file, $ix, $actiontest[0]));
 }
 
 function orElse(Maybe\Maybe $m1, Maybe\Maybe $m2): Maybe\Maybe {
