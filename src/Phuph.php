@@ -8,7 +8,7 @@ use FunctionalPHP\Trampoline as T;
 use Widmogrod\Functional as wf;
 use Widmogrod\Monad\Maybe as Maybe;
 
-// a|b|c... -> ((a|b|c...) -> e) -> e
+// a|b|c... -> (a->e,b->e,c->e...) -> e
 function fold(array $sum, array $fns) {
   list($k, $v) = $sum;
   return getIfSet($sum[0], $fns)->reduce(function($_, $fn) use ($v) {
