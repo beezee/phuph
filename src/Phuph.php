@@ -22,8 +22,8 @@ function fold(array $sum, array $fns) {
 function matchBoundaries(string $file, int $ix, string $test): array { 
   $len = strlen($test);
   $matches = substr($file, $ix, $len) == $test;
-  if ($len <= 0 || !$matches || $file == $test) return ["nothing", null];
-  if ($ix == 0) return ["after", $ix + $len];
+  if ($len == 0 || !$matches || $file == $test) return ["nothing", null];
+  if ($ix <= 0) return ["after", $ix + $len];
   if (strlen($file) <= $ix + $len) return ["before", $ix - 1];
   return ["both", [$ix - 1, $ix + $len]];
 }
