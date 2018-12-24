@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace phuph\test;
 
 use Eris\Generator;
+use FunctionalPHP\Trampoline as T;
 use phuph;
 use Widmogrod\Functional as wf;
 use Widmogrod\Monad\Maybe as Maybe;
@@ -88,5 +89,19 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
            || ($e && [$sq, $dq] == [$sc[0], $sc[1]])
            || ([$sq, $dq, $b] == $sc)));
     });
+  }
+
+  public function testEscapedRec() {
+    $this->forAll(
+        Generator\string(), Generator\pos(),
+        Generator\string())
+      ->disableShrinking()
+      ->then(function($pre, $n, $post) {
+        $s = array_reduce(range(1, $n), function($a, $_) {
+          return $a . "\\";
+        }, $pre . "1") . $post;
+        $r = T\trampoline(phuph\escapedRec, strlen($pre) + $n, $s, false);
+        $this->assertTrue($r == (($n % 2) == 1));
+      });
   }
 }
