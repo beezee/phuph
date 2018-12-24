@@ -8,11 +8,24 @@ use FunctionalPHP\Trampoline as T;
 use Widmogrod\Functional as wf;
 use Widmogrod\Monad\Maybe as Maybe;
 
-// string -> int -> string -> maybe (int, int)
-function matchForward(string $file, int $ix, string $test): Maybe\Maybe {
+// a|b|c... -> ((a|b|c...) -> e) -> e
+function fold(array $sum, array $fns) {
+  list($k, $v) = $sum;
+  return getIfSet($sum[0], $fns)->reduce(function($_, $fn) use ($v) {
+    return function() use ($fn, $v) { return $fn($v); };
+  }, function () use ($k) { 
+    throw new Exception("No function provided for $k folding folding over sum type");
+  })();
+}
+
+// string -> int -> string -> nothing|before|after|both
+function matchBoundaries(string $file, int $ix, string $test): array { 
   $len = strlen($test);
-  return $len > 0 && substr($file, $ix, $len) == $test
-    ? Maybe\just([$ix - 1, $ix + $len]) : Maybe\nothing();
+  $matches = substr($file, $ix, $len) == $test;
+  if ($len <= 0 || !$matches || $file == $test) return ["nothing", null];
+  if ($ix == 0) return ["after", $ix + $len];
+  if (strlen($file) <= $ix + $len) return ["before", $ix - 1];
+  return ["both", [$ix - 1, $ix + $len]];
 }
 
 // actiontest :: [test: string, close: context, open: context, explicit: o|c (t|f)]]
@@ -65,13 +78,17 @@ function badSyntax(string $close, string $open): array {
 // param actiontest :: actiontest
 // returns Maybe (matchString, (context, action, ix), (context, action, ix))
 function testAction(array $actiontest, int $ix, string $file): Maybe\Maybe {
-  return matchForward($file, $ix, $actiontest[0])
-    ->map(function($oc) use($actiontest) {
-      return [
-        $actiontest[0],
-        [$actiontest[1], false, $oc[0]], 
-        [$actiontest[2], true, $oc[1]]];
-    });
+  $ixPair = function($c, $o) use ($actiontest) {
+    return [
+      $actiontest[0],
+      [$actiontest[1], false, $c],
+      [$actiontest[2], true, $o]];
+  };
+  return Maybe\maybeNull(fold(matchBoundaries($file, $ix, $actiontest[0]),
+    ["nothing" => wf\constt(null),
+     "before" => function($i) use ($file, $ixPair) { return $ixPair($i, strlen($file)); },
+     "after" => function($i) use ($ixPair) { return $ixPair(0, $i); },
+     "both" => function($oc) use ($ixPair) { return $ixPair($oc[0], $oc[1]); }]));
 }
 
 function orElse(Maybe\Maybe $m1, Maybe\Maybe $m2): Maybe\Maybe {

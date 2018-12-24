@@ -26,9 +26,16 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
           return $a && array_reduce(range($i, $ei),
             function ($a, $i2) use ($s, $i) {
               $test = substr($s, $i, $i2 - $i);
-              return $a && ("" == $test || 
-                phuph\matchForward($s, $i, $test)->extract() ==
-                  [$i - 1, $i + strlen($test)]);
+              $r = phuph\matchBoundaries($s, $i, $test);
+              return $a && phuph\fold($r, [
+                "nothing" => function() use ($test, $s) { 
+                  return "" == $test || $test == $s; },
+                "before" => function($r) use($s, $i, $i2) { 
+                  return strlen($s) == $i2 && ($i - 1) == $r; },
+                "after" => function($r) use($test, $i) {
+                  return 0 == $i && strlen($test) == $r; },
+                "both" => function($r) use ($test, $i) {
+                  return [$i - 1, $i + strlen($test)] == $r; }]);
             }, true);
         }, true));
       });
