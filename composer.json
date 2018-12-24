@@ -11,7 +11,7 @@
     ],
     "autoload": {
       "psr-4": {
-        "phuph\\": "src/"
+        "phuph\\": "src/",
         "phuph\\test\\": "test/"
       }
     },
