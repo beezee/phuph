@@ -52,7 +52,7 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
     $this->forAll(
         Generator\elements("nothing", "before", "after", "both"),
         Generator\int(), Generator\int(),
-        Generator\elements(array_values(phuph\actions())),
+        Generator\elements(...array_values(phuph\actions())),
         Generator\string())
       ->then(function($b, $oi, $ci, $at, $f) {
         $bs = [$b, phuph\fold([$b, null],
@@ -74,7 +74,7 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
 
   public function testSpecialContext() {
     $this->forAll(
-        Generator\elements(["'", '"', "{", "}"]),
+        Generator\elements("'", '"', "{", "}"),
         Generator\bool(), Generator\bool(),
         Generator\int(), Generator\bool())
       ->then(function($c, $sq, $dq, $b, $e) {
