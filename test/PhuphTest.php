@@ -142,12 +142,12 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
     $this->forAll(
         Generator\seq(
           Generator\tuple(
-            Generator\elements(array_keys(array_reduce(
-              array_values(phuph\actions()), 
-              function($a, $e) { 
-                $a[$e[1]] = 0; 
-                return $a;
-              }, []))),
+            Generator\elements(array_keys(
+              T\pool(function(array $a, array $acc) {
+                if (sizeof($a) == 0) return $acc;
+                $acc[$a[0][1]] = 0;
+                return $this(array_slice($a, 1), $acc);
+              })(array_values(phuph\actions()), []))),
             Generator\pos())),
         Generator\string())
       ->then(function($os, $s) {
