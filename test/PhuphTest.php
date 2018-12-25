@@ -136,4 +136,47 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
         }, true));
       });
   }
+
+  public function testProcessRec() {
+    $tokens = array_map(function($a) { return $a[0]; }, array_values(phuph\actions()));
+    $this->forAll(
+        Generator\seq(
+          Generator\tuple(
+            Generator\elements(array_keys(array_reduce(
+              array_values(phuph\actions()), 
+              function($a, $e) { 
+                $a[$e[1]] = 0; 
+                return $a;
+              }, []))),
+            Generator\pos())),
+        Generator\string())
+      ->then(function($os, $s) {
+        // acc: [sum: int, [(context, action, ix)]]
+        list($l, $parsed) = array_reduce($os, function($a, $e) {
+          $ei = $e[1] % 27;
+          return [$a[0] + $ei,
+            wf\push_($a[1], 
+              [[$e[0], true, $a[0]], 
+               [$e[0], false, $a[0] + $ei]])];
+          }, [0, []]);
+        $f = T\pool(function(string $s, int $max, string $acc) {
+          if (strlen($acc) > $max) return $acc;
+          return $this($s, $max, $acc . $s);
+        })("pad" . $s, $l, "");
+        $r = T\trampoline(phuph\processRec, 0, $parsed, $f, Maybe\nothing(), []);
+        $this->assertTrue(T\pool(function(array $r, array $p, bool $a) use ($f) {
+          if (sizeof($r) == 0) return $a;
+          list($o, $c) = $p;
+          list($b) = $r;
+          return $this(array_slice($r, 1), array_slice($p, 2),
+            $a && strlen($b[1]) == ($c[2] - $o[2] + 1) && $b[0] == $c[0]
+              && $b[0] == $o[0]);
+        })($r, $parsed, true));
+        $unbalanced = [["code", true, 0], ["code", true, 0]];
+        $this->expectException(\Exception::class);
+        T\trampoline(phuph\processRec, 0, 
+          wf\push_($unbalanced, $parsed), $f, 
+          Maybe\nothing(), []);
+      });
+  }
 }
