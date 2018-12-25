@@ -50,7 +50,7 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
   public function testHandleBoundaries()
   {
     $this->forAll(
-        Generator\elements(["nothing", "before", "after", "both"]),
+        Generator\elements("nothing", "before", "after", "both"),
         Generator\int(), Generator\int(),
         Generator\elements(array_values(phuph\actions())),
         Generator\string())
