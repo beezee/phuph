@@ -15,6 +15,8 @@ in the category of endofunctors.
 
     composer g require beezee/phuph
 
+Make sure that `~/.composer/vendor/bin` is on your PATH.
+
 This allows you to target specially formatted markdown files for document generation with the phuph
 command. If you have your markdown in the file `README.phuph`, you would run
 
