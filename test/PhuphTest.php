@@ -169,7 +169,7 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
           list($o, $c) = $p;
           list($b) = $r;
           return $this(array_slice($r, 1), array_slice($p, 2),
-            $a && strlen($b[1]) == ($c[2] - $o[2] + 1) && $b[0] == $c[0]
+            $a && substr($f, $o[2], $c[2] - $o[2] + 1) == $b[1] && $b[0] == $c[0]
               && $b[0] == $o[0]);
         })($r, $parsed, true));
         $unbalanced = [["code", true, 0], ["code", true, 0]];
