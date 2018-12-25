@@ -164,6 +164,7 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
           return $this($s, $max, $acc . $s);
         })("pad" . $s, $l, "");
         $r = T\trampoline(phuph\processRec, 0, $parsed, $f, Maybe\nothing(), []);
+        // This is starting to re-implement code under test, but it's not worthless
         $this->assertTrue(T\pool(function(array $r, array $p, bool $a) use ($f) {
           if (sizeof($r) == 0) return $a;
           list($o, $c) = $p;
@@ -172,6 +173,20 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
             $a && substr($f, $o[2], $c[2] - $o[2] + 1) == $b[1] && $b[0] == $c[0]
               && $b[0] == $o[0]);
         })($r, $parsed, true));
+        // THIS is cool. recompute the original inputs, solely from the output,
+        // and assert that running again is equal to initial output.
+        // this means that proccessRec has a true inverse with which it
+        // forms an isomorphism
+        // acc: [len: int, reInput: [(context, action, ix)]]
+        $inverse = array_reduce($r, function($a, $e) {
+          return [$a[0] + strlen($e[1]),
+            wf\push_($a[1], 
+              [[$e[0], true, $a[0]], 
+               [$e[0], false, $a[0] + strlen($e[1]) - 1]])];
+        }, [0, []]);
+        $this->assertTrue(
+          T\trampoline(phuph\processRec, 0, $inverse[1], $f, Maybe\nothing(), [])
+          == $r);
         $unbalanced = [["code", true, 0], ["code", true, 0]];
         $this->expectException(\Exception::class);
         T\trampoline(phuph\processRec, 0, 
