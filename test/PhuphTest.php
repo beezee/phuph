@@ -186,7 +186,8 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
         }, [0, []]);
         $this->assertTrue(
           T\trampoline(phuph\processRec, 0, $inverse[1], $f, Maybe\nothing(), [])
-          == $r);
+          == $r
+          && $parsed == $inverse[1]);
         $unbalanced = [["code", true, 0], ["code", true, 0]];
         $this->expectException(\Exception::class);
         T\trampoline(phuph\processRec, 0, 
