@@ -95,13 +95,45 @@ class PhuphTest extends \PHPUnit\Framework\TestCase
     $this->forAll(
         Generator\string(), Generator\pos(),
         Generator\string())
-      ->disableShrinking()
       ->then(function($pre, $n, $post) {
         $s = array_reduce(range(1, $n), function($a, $_) {
           return $a . "\\";
         }, $pre . "1") . $post;
         $r = T\trampoline(phuph\escapedRec, strlen($pre) + $n, $s, false);
         $this->assertTrue($r == (($n % 2) == 1));
+      });
+  }
+
+  public function testParseRec() {
+    $tokens = array_map(function($a) { return $a[0]; }, array_values(phuph\actions()));
+    $this->forAll(
+        Generator\string(), Generator\seq(Generator\elements(...$tokens)))
+      ->then(function($delim, $ts) {
+        // blocks that start and end at 0 or right bound are ignored
+        // in processing. this is shitty but not worth fixing right now,
+        // so left pad the input string
+        $s = "hackycrap" . array_reduce($ts, function($a, $t) use ($delim) {
+          return $a . $delim . $t;
+        }, $delim) . $delim;
+        $r = T\trampoline(phuph\parseRec, 0, $s, phuph\specialContextZero(), []);
+        // [acc: [(o, c)], current: o|()]
+        $pairs = array_reduce($r, function($a, $e) {
+          return $a[1]
+            ? [wf\push_($a[0], [[$a[1], $e]]), null]
+            : [$a[0], $e];
+         }, [[], null])[0];
+        $this->assertTrue(array_reduce($pairs, function($a, $e) use ($s) {
+          return $a && phuph\action($e[0][0], $e[1][0])->map(function($a) use ($e, $s) {
+            return substr($s, $e[0][2] + 1, strlen($a[0])) == $a[0];
+          })->extract() ?: false;
+        }, true));
+        // testing escape characters at this level with unknown inputs would be tedious
+        // fall back to old school asserts
+        $esc = '```phuph echo "\"repl{ 1; }\"" phuph```';
+        $r = T\trampoline(phuph\parseRec, 0, $esc, phuph\specialContextZero(), []);
+        $this->assertTrue(array_reduce($r, function($a, $e) {
+          return $a && ($e[0] == "code" || $e[0] == "text");
+        }, true));
       });
   }
 }
